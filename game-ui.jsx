@@ -20,6 +20,19 @@ const C = {
   paper:  "#f1ebd2",
 };
 
+// ─── Fuzzy matching for write mode ────────────────────────────────
+function levenshtein(a, b) {
+  const dp = Array.from({length: a.length+1}, (_,i) => Array.from({length: b.length+1}, (_,j) => i===0?j:j===0?i:0));
+  for (let i=1;i<=a.length;i++) for (let j=1;j<=b.length;j++)
+    dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j-1],dp[i-1][j],dp[i][j-1]);
+  return dp[a.length][b.length];
+}
+function fuzzyMatch(input, target) {
+  const a = input.trim().toLowerCase(), b = target.trim().toLowerCase();
+  if (a === b) return true;
+  return levenshtein(a, b) <= Math.max(1, Math.floor(b.length / 5));
+}
+
 // ─── Utility ──────────────────────────────────────────────────────
 const box = (extra = {}) => ({
   background: C.panel,
@@ -108,12 +121,13 @@ function StreakPips({ streak, hardMode }) {
 }
 
 // ─── TankCard ─────────────────────────────────────────────────────
-function TankCard({ card, cardInfo, picked, revealed, onPick, onAdvance, session }) {
+function TankCard({ card, cardInfo, picked, revealed, onPick, onAdvance, session, writeInput, onWriteInputChange, onWriteSubmit }) {
   const t = card.tank;
   const hardMode = card.hardMode;
+  const writeMode = card.writeMode;
 
-  const accentColor = hardMode ? C.amber : C.red;
-  const modeLabel   = hardMode ? "VARIANT CHALLENGE" : "IDENTIFY THE VEHICLE";
+  const accentColor = writeMode ? C.amber : (hardMode ? C.amber : C.red);
+  const modeLabel   = writeMode ? "FREE RECALL — TYPE THE DESIGNATION" : (hardMode ? "VARIANT CHALLENGE" : "IDENTIFY THE VEHICLE");
 
   return (
     <div style={{ width:"100%", height:"100%", display:"flex", flexDirection:"column",
@@ -190,7 +204,7 @@ function TankCard({ card, cardInfo, picked, revealed, onPick, onAdvance, session
                 fontFamily:"'Special Elite',monospace",
                 pointerEvents:"none", opacity:0.85,
                 background:"rgba(251,246,225,0.4)" }}>
-                {revealed ? "IDENTIFIED" : hardMode ? "VARIANT?" : "UNKNOWN"}
+                {revealed ? "IDENTIFIED" : writeMode ? "RECALL" : hardMode ? "VARIANT?" : "UNKNOWN"}
               </div>
             </div>
             <div style={{ display:"flex", justifyContent:"space-between", padding:"5px 14px",
@@ -245,50 +259,90 @@ function TankCard({ card, cardInfo, picked, revealed, onPick, onAdvance, session
               <div style={{ ...box(), padding:"12px 18px", display:"flex", flexDirection:"column", gap:10, height:"100%" }}>
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
                   paddingBottom:8, borderBottom:`1px solid ${C.border}` }}>
-                  <div style={{ fontSize:12, letterSpacing:2, fontWeight:700, color: hardMode ? C.amber : C.border }}>
+                  <div style={{ fontSize:12, letterSpacing:2, fontWeight:700, color: (writeMode || hardMode) ? C.amber : C.border }}>
                     {modeLabel}
                   </div>
-                  {cardInfo.streak > 0 && <StreakPips streak={cardInfo.streak} hardMode={hardMode}/>}
+                  {cardInfo.streak > 0 && <StreakPips streak={cardInfo.streak} hardMode={hardMode || writeMode}/>}
                 </div>
-                {hardMode && (
+                {hardMode && !writeMode && (
                   <div style={{ fontSize:10, letterSpacing:1, color:C.amber, paddingBottom:4,
                     fontStyle:"italic", borderBottom:`1px dashed ${C.amber}` }}>
                     All options are from the same vehicle family
                   </div>
                 )}
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                  {card.choices.map((opt, i) => {
-                    const isPicked = picked === i;
-                    const isCorrect = picked != null && i === card.correctIdx;
-                    const isWrong = isPicked && i !== card.correctIdx;
-                    const state = isCorrect ? "correct" : isWrong ? "wrong" : "idle";
-                    return (
-                      <button key={i}
-                        style={{
-                          padding:"9px 12px",
-                          border:`2px solid ${state==="correct"?C.green:state==="wrong"?C.red:C.border}`,
-                          background:state==="correct"?"#dde7d3":state==="wrong"?"#f0d8d0":C.panel,
-                          fontFamily:"'Special Elite',monospace",
-                          fontSize:12, fontWeight:700, letterSpacing:0.5,
-                          cursor:state==="idle"?"pointer":"default",
-                          display:"flex", alignItems:"center", justifyContent:"space-between",
-                          textAlign:"left",
-                          color:state==="wrong"?C.red:state==="correct"?C.green:C.border,
-                          transition:"background 0.15s, border-color 0.15s",
-                        }}
-                        onClick={() => picked == null && onPick(i)}
-                        disabled={picked != null}>
-                        <span>
-                          <span style={{ display:"inline-block", width:20, height:20, marginRight:8,
-                            background:C.border, color:"#f0ebd0", textAlign:"center", lineHeight:"20px",
-                            fontSize:10, borderRadius:2 }}>{"ABCD"[i]}</span>
-                          {opt.toUpperCase()}
-                        </span>
-                        <span style={{ fontSize:16 }}>{isCorrect?"✓":isWrong?"✗":""}</span>
+                {writeMode ? (
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    <div style={{ fontSize:10, letterSpacing:1, color:C.amber, fontStyle:"italic",
+                      paddingBottom:4, borderBottom:`1px dashed ${C.amber}` }}>
+                      Type the vehicle designation — close spelling accepted
+                    </div>
+                    <input
+                      value={writeInput}
+                      onChange={e => onWriteInputChange(e.target.value)}
+                      onKeyDown={e => { if (e.key==="Enter" && picked==null) { e.preventDefault(); onWriteSubmit(); } }}
+                      disabled={picked != null}
+                      placeholder="Enter designation…"
+                      autoFocus
+                      style={{
+                        fontFamily:"'Special Elite',monospace", fontSize:16, padding:"9px 12px",
+                        border:`2px solid ${picked===true?C.green:picked===false?C.red:C.border}`,
+                        background: picked===true?"#dde7d3":picked===false?"#f0d8d0":C.panel,
+                        color:C.border, letterSpacing:0.5, width:"100%", boxSizing:"border-box",
+                        outline:"none",
+                      }}
+                    />
+                    {picked != null && (
+                      <div style={{ fontSize:12, fontWeight:700, letterSpacing:0.5,
+                        color: picked===true ? C.green : C.red }}>
+                        {picked===true ? `✓ CORRECT — ${t.name.toUpperCase()}` : `✗ WRONG — ${t.name.toUpperCase()}`}
+                      </div>
+                    )}
+                    {picked == null && (
+                      <button onClick={onWriteSubmit} disabled={!writeInput.trim()}
+                        style={{ padding:"9px 12px", border:`2px solid ${C.border}`,
+                          background: writeInput.trim() ? C.border : "#3a3f2c",
+                          color: writeInput.trim() ? "#f0ebd0" : "#79735a",
+                          fontFamily:"'Special Elite',monospace", fontSize:12, fontWeight:700, letterSpacing:1.5,
+                          cursor: writeInput.trim() ? "pointer" : "default" }}>
+                        VERIFY IDENTIFICATION
                       </button>
-                    );
-                  })}
-                </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                    {card.choices.map((opt, i) => {
+                      const isPicked = picked === i;
+                      const isCorrect = picked != null && i === card.correctIdx;
+                      const isWrong = isPicked && i !== card.correctIdx;
+                      const state = isCorrect ? "correct" : isWrong ? "wrong" : "idle";
+                      return (
+                        <button key={i}
+                          style={{
+                            padding:"9px 12px",
+                            border:`2px solid ${state==="correct"?C.green:state==="wrong"?C.red:C.border}`,
+                            background:state==="correct"?"#dde7d3":state==="wrong"?"#f0d8d0":C.panel,
+                            fontFamily:"'Special Elite',monospace",
+                            fontSize:12, fontWeight:700, letterSpacing:0.5,
+                            cursor:state==="idle"?"pointer":"default",
+                            display:"flex", alignItems:"center", justifyContent:"space-between",
+                            textAlign:"left",
+                            color:state==="wrong"?C.red:state==="correct"?C.green:C.border,
+                            transition:"background 0.15s, border-color 0.15s",
+                          }}
+                          onClick={() => picked == null && onPick(i)}
+                          disabled={picked != null}>
+                          <span>
+                            <span style={{ display:"inline-block", width:20, height:20, marginRight:8,
+                              background:C.border, color:"#f0ebd0", textAlign:"center", lineHeight:"20px",
+                              fontSize:10, borderRadius:2 }}>{"ABCD"[i]}</span>
+                            {opt.toUpperCase()}
+                          </span>
+                          <span style={{ fontSize:16 }}>{isCorrect?"✓":isWrong?"✗":""}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 {/* FIELD NOTE placeholder */}
                 <div style={{ ...box(), padding:"11px 15px", marginTop:"auto", flexShrink:0 }}>
                   <div style={{ fontSize:10, letterSpacing:2, color:C.muted, textTransform:"uppercase",
@@ -337,7 +391,8 @@ function TankCard({ card, cardInfo, picked, revealed, onPick, onAdvance, session
         justifyContent:"space-between", background:C.top, color:C.topFg,
         borderTop:"3px double #1a1d12", fontSize:11, letterSpacing:1.5, overflow:"hidden" }}>
         <span style={{ opacity:0.75, display:"inline-block", width:240, whiteSpace:"nowrap", overflow:"hidden" }}>
-          {picked == null ? "PICK A NAME · or press 1–4"
+          {picked == null
+            ? (card.writeMode ? "TYPE THE DESIGNATION · ENTER TO CONFIRM" : "PICK A NAME · or press 1–4")
             : revealed ? "PRESS SPACE → NEXT VEHICLE"
             : "PRESS SPACE → REVEAL INTEL"}
         </span>
@@ -374,12 +429,13 @@ function TankCard({ card, cardInfo, picked, revealed, onPick, onAdvance, session
 
 // ─── App ──────────────────────────────────────────────────────────
 function App() {
-  const [ready, setReady]       = useState(false);
-  const [card, setCard]         = useState(null);
-  const [picked, setPicked]     = useState(null);
-  const [revealed, setRevealed] = useState(false);
-  const [session, setSession]   = useState({ right: 0, wrong: 0, hardRight: 0, total: 0 });
-  const [cardInfo, setCardInfo] = useState(null);
+  const [ready, setReady]           = useState(false);
+  const [card, setCard]             = useState(null);
+  const [picked, setPicked]         = useState(null);
+  const [revealed, setRevealed]     = useState(false);
+  const [session, setSession]       = useState({ right: 0, wrong: 0, hardRight: 0, total: 0 });
+  const [cardInfo, setCardInfo]     = useState(null);
+  const [writeInput, setWriteInput] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -401,9 +457,11 @@ function App() {
       const progress = await Accounts.loadProgress();
       if (progress) SRS.importState({ cards: progress.cards || {}, session: { right:0, wrong:0, hardRight:0, total:0 } });
       const t = SRS.pickNext(null);
-      const c = SRS.buildCard(t, SRS.isHardMode(t.name));
-      setCard(c);
-      setCardInfo(SRS.getCardInfo(t.name));
+      const info = SRS.getCardInfo(t.name);
+      const writeMode = info.streak >= 3 && Math.random() < 0.4;
+      const hardMode = !writeMode && SRS.isHardMode(t.name);
+      setCard(SRS.buildCard(t, hardMode, writeMode));
+      setCardInfo(info);
       setSession(SRS.getSessionStats());
       setReady(true);
     })();
@@ -414,11 +472,14 @@ function App() {
   const nextCard = useCallback(() => {
     if (!card) return;
     const next = SRS.pickNext(card.tank);
-    const hardMode = SRS.isHardMode(next.name);
-    setCard(SRS.buildCard(next, hardMode));
-    setCardInfo(SRS.getCardInfo(next.name));
+    const info = SRS.getCardInfo(next.name);
+    const writeMode = info.streak >= 3 && Math.random() < 0.4;
+    const hardMode = !writeMode && SRS.isHardMode(next.name);
+    setCard(SRS.buildCard(next, hardMode, writeMode));
+    setCardInfo(info);
     setPicked(null);
     setRevealed(false);
+    setWriteInput("");
     refreshSession();
   }, [card]);
 
@@ -440,18 +501,38 @@ function App() {
     saveProgress();
   };
 
-  const handleAdvance = () => {
-    if (revealed) {
-      nextCard();
-    } else {
-      setRevealed(true);
+  const handleWriteSubmit = useCallback(() => {
+    if (!card || picked != null || !writeInput.trim()) return;
+    const correct = fuzzyMatch(writeInput, card.tank.name);
+    if (correct) SRS.onCorrect(card.tank.name); else SRS.onWrong(card.tank.name);
+    setCardInfo(SRS.getCardInfo(card.tank.name));
+    setPicked(correct);
+    refreshSession();
+    saveProgress();
+    document.activeElement?.blur();
+  }, [card, picked, writeInput]);
+
+  const handleAdvance = useCallback(() => {
+    if (revealed) { nextCard(); return; }
+    if (picked == null) {
+      if (card.writeMode) return;
+      SRS.onWrong(card.tank.name);
+      setPicked(-1);
+      setCardInfo(SRS.getCardInfo(card.tank.name));
+      refreshSession();
+      saveProgress();
     }
-  };
+    setRevealed(true);
+  }, [revealed, picked, card, nextCard]);
 
   // Keyboard: 1-4 pick choice, space/enter advance
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === " " || e.key === "Enter") { e.preventDefault(); handleAdvance(); }
+      if (e.key === " " || e.key === "Enter") {
+        if (document.activeElement.tagName === "INPUT") return;
+        e.preventDefault();
+        handleAdvance();
+      }
       if (["1","2","3","4"].includes(e.key)) handlePick(parseInt(e.key) - 1);
     };
     window.addEventListener("keydown", handler);
@@ -468,6 +549,7 @@ function App() {
   return (
     <div className="stage">
       <TankCard
+        key={card.tank.name}
         card={card}
         cardInfo={cardInfo}
         picked={picked}
@@ -475,6 +557,9 @@ function App() {
         onPick={handlePick}
         onAdvance={handleAdvance}
         session={session}
+        writeInput={writeInput}
+        onWriteInputChange={setWriteInput}
+        onWriteSubmit={handleWriteSubmit}
       />
     </div>
   );

@@ -688,7 +688,7 @@ function LeaderboardView({ onBack }) {
                     {row.totalRight.toLocaleString()}
                   </div>
                   <div style={{ textAlign:"right", fontSize:13, fontWeight:700,
-                    color: row.accuracy >= 70 ? C.green : row.accuracy >= 50 ? C.amber : C.red }}>
+                    color: row.accuracy >= 70 ? C.green : row.accuracy >= 50 ? (isMe ? "#1c1c14" : C.amber) : C.red }}>
                     {row.totalRight + row.totalWrong > 0 ? row.accuracy + "%" : "—"}
                   </div>
                   <div style={{ textAlign:"right", fontSize:13, fontWeight:700 }}>

@@ -77,7 +77,7 @@ window.SRS = (function () {
     return shuffle(pool).slice(0, 3);
   }
 
-  function buildCard(tank, hardMode) {
+  function buildCard(tank, hardMode, writeMode) {
     const distractors = hardMode
       ? getDistractors(tank)
       : (() => {
@@ -90,7 +90,8 @@ window.SRS = (function () {
       tank,
       choices: choices.map(t => t.name),
       correctIdx: choices.indexOf(tank),
-      hardMode
+      hardMode,
+      writeMode: !!writeMode,
     };
   }
 
