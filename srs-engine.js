@@ -57,28 +57,34 @@ window.SRS = (function () {
     return getCard(name).streak >= 2;
   }
 
-  // Get distractors: same family first, then same country/era as fallback
+  // Get distractors: same era first, then same family/country within that era
   function getDistractors(tank) {
-    const all = window.TANKS.filter(t => t.name !== tank.name);
-    const family = tank.family;
+    const all     = window.TANKS.filter(t => t.name !== tank.name);
+    const sameEra = all.filter(t => t.era === tank.era);
+    const pool    = sameEra.length >= 3 ? sameEra : all;
 
-    let sameFam = family ? all.filter(t => t.family === family) : [];
+    const family  = tank.family;
+    const sameFam = family ? pool.filter(t => t.family === family) : [];
 
-    if (sameFam.length >= 3) {
-      return shuffle(sameFam).slice(0, 3);
-    }
+    if (sameFam.length >= 3) return shuffle(sameFam).slice(0, 3);
 
-    const sameCountry = all.filter(t => (t.nation||t.country) === (tank.nation||tank.country) && !sameFam.includes(t));
+    const sameCountry = pool.filter(
+      t => (t.nation||t.country) === (tank.nation||tank.country) && !sameFam.includes(t)
+    );
     const blended = [...sameFam, ...shuffle(sameCountry)].slice(0, 3);
     if (blended.length >= 3) return blended;
 
-    return shuffle(all).slice(0, 3);
+    return shuffle(pool).slice(0, 3);
   }
 
   function buildCard(tank, hardMode) {
     const distractors = hardMode
       ? getDistractors(tank)
-      : shuffle(window.TANKS.filter(t => t.name !== tank.name)).slice(0, 3);
+      : (() => {
+          const others  = window.TANKS.filter(t => t.name !== tank.name);
+          const sameEra = others.filter(t => t.era === tank.era);
+          return shuffle(sameEra.length >= 3 ? sameEra : others).slice(0, 3);
+        })();
     const choices = shuffle([...distractors, tank]);
     return {
       tank,
