@@ -857,6 +857,116 @@ function SubPage({ children }) {
   );
 }
 
+// ─── Bug Report Modal ─────────────────────────────────────────────
+function BugReportModal() {
+  const [open, setOpen]           = React.useState(false);
+  const [issueType, setIssueType] = React.useState("Wrong image");
+  const [description, setDesc]    = React.useState("");
+  const [status, setStatus]       = React.useState(null);
+
+  const submit = async () => {
+    if (status === "sending") return;
+    setStatus("sending");
+    try {
+      await window.supabase.from("bug_reports").insert({
+        page: "hub",
+        tank_name: null,
+        tank_photo_url: null,
+        issue_type: issueType,
+        description: description.trim() || null,
+      });
+      setStatus("ok");
+      setTimeout(() => { setOpen(false); setStatus(null); setDesc(""); }, 1800);
+    } catch(e) {
+      setStatus("err");
+    }
+  };
+
+  const overlayStyle = {
+    position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:1000,
+    display:"flex", alignItems:"center", justifyContent:"center",
+  };
+  const modalStyle = {
+    background: C.panel, border:`2px solid ${C.border}`,
+    boxShadow:`0 2px 0 ${C.border}, 0 8px 24px rgba(0,0,0,0.35)`,
+    padding:"24px 28px", width:340, maxWidth:"90vw",
+    fontFamily:"'Special Elite',monospace",
+  };
+  const labelStyle = { fontSize:10, letterSpacing:1.5, color:C.muted, display:"block", marginBottom:4 };
+  const inputStyle = {
+    width:"100%", boxSizing:"border-box", padding:"7px 10px",
+    border:`2px solid ${C.border}`, background:C.bg,
+    fontFamily:"'Special Elite',monospace", fontSize:13, color:C.border,
+    outline:"none", marginBottom:14,
+  };
+  const btnStyle = (primary) => ({
+    padding:"8px 14px", border:`2px solid ${C.border}`,
+    background: primary ? C.border : "transparent",
+    color: primary ? "#f0ebd0" : C.border,
+    fontFamily:"'Special Elite',monospace", fontSize:11, fontWeight:700,
+    letterSpacing:1.5, cursor:"pointer",
+  });
+
+  return (
+    <React.Fragment>
+      <button
+        onClick={() => { setOpen(true); setStatus(null); }}
+        style={{
+          position:"fixed", bottom:14, right:14, zIndex:900,
+          padding:"6px 12px", border:`2px solid ${C.border}`,
+          background: C.panel, color:C.border, opacity:0.7,
+          fontFamily:"'Special Elite',monospace", fontSize:10,
+          letterSpacing:1.5, cursor:"pointer",
+        }}
+        title="Report an issue"
+      >⚑ REPORT</button>
+
+      {open && (
+        <div style={overlayStyle} onClick={e => { if (e.target===e.currentTarget) setOpen(false); }}>
+          <div style={modalStyle}>
+            <div style={{ fontSize:13, fontWeight:700, letterSpacing:2, marginBottom:16,
+              borderBottom:`1px dashed ${C.border}`, paddingBottom:10 }}>
+              REPORT AN ISSUE
+            </div>
+            <label style={labelStyle}>ISSUE TYPE</label>
+            <select
+              value={issueType} onChange={e => setIssueType(e.target.value)}
+              style={{ ...inputStyle }}
+            >
+              <option>Wrong image</option>
+              <option>Wrong name / designation</option>
+              <option>Wrong stats</option>
+              <option>Other</option>
+            </select>
+            <label style={labelStyle}>DESCRIPTION (OPTIONAL)</label>
+            <textarea
+              value={description} onChange={e => setDesc(e.target.value)}
+              rows={3} placeholder="Add details…"
+              style={{ ...inputStyle, resize:"vertical" }}
+            />
+            {status === "ok" && (
+              <div style={{ color:C.green, fontSize:12, letterSpacing:1, marginBottom:12 }}>
+                ✓ REPORT SUBMITTED — THANK YOU
+              </div>
+            )}
+            {status === "err" && (
+              <div style={{ color:C.red, fontSize:12, letterSpacing:1, marginBottom:12 }}>
+                ✗ SUBMISSION FAILED — TRY AGAIN
+              </div>
+            )}
+            <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+              <button style={btnStyle(false)} onClick={() => setOpen(false)}>CANCEL</button>
+              <button style={btnStyle(true)} onClick={submit} disabled={status==="sending"}>
+                {status==="sending" ? "SENDING…" : "SUBMIT REPORT"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </React.Fragment>
+  );
+}
+
 // ─── App ──────────────────────────────────────────────────────────
 function App() {
   const [view, setView] = useState("hub");
@@ -912,6 +1022,7 @@ function App() {
           <LeaderboardView onBack={() => setView("hub")} />
         </SubPage>
       )}
+      <BugReportModal />
     </div>
   );
 }
