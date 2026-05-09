@@ -5,6 +5,26 @@
 // ──────────────────────────────────────────────────────────────────
 const { useState, useEffect, useRef } = React;
 
+// ─── Language ─────────────────────────────────────────────────────
+const LanguageContext = React.createContext(null);
+
+function useLanguage() {
+  const [lang, setLangState] = useState(() => {
+    const s = localStorage.getItem("ankitank_language");
+    return (s === "EN" || s === "FR") ? s : "FR";
+  });
+  function setLang(l) { localStorage.setItem("ankitank_language", l); setLangState(l); }
+  function t(key) { return window.TRANSLATIONS?.[lang]?.[key] ?? key; }
+  return { lang, setLang, t };
+}
+
+function LanguageProvider({ children }) {
+  const language = useLanguage();
+  return <LanguageContext.Provider value={language}>{children}</LanguageContext.Provider>;
+}
+
+function useLang() { return React.useContext(LanguageContext); }
+
 // ─── Colour palette ───────────────────────────────────────────────
 const C = {
   bg:     "#efe7c8",
@@ -100,6 +120,7 @@ function filterTanks(query) {
 
 // ─── Tank Detail Modal ────────────────────────────────────────────
 function TankDetailModal({ tank, onClose }) {
+  const { t } = useLang();
   const [imgErr, setImgErr] = useState(false);
   useEffect(() => {
     setImgErr(false);
@@ -109,16 +130,16 @@ function TankDetailModal({ tank, onClose }) {
   }, [tank]);
 
   const dossierFields = [
-    ["ORIGIN", tank.nation],
-    ["YEAR", String(tank.year)],
-    ["CREW", String(tank.crew)],
-    ["MAIN GUN", tank.gun],
-    ["ERA", tank.era],
-    ["TYPE", tank.type],
-    ["FAMILY", tank.family],
-    ["BATTLE RATING", tank.br],
-    ["RANK", tank.rank],
-    ["NICKNAME", tank.nickname],
+    [t("field.origin"),       tank.nation],
+    [t("field.year"),         String(tank.year)],
+    [t("field.crew"),         String(tank.crew)],
+    [t("field.main_gun"),     tank.gun],
+    [t("field.era"),          tank.era],
+    [t("field.type"),         tank.type],
+    [t("field.family"),       tank.family],
+    [t("field.battle_rating"),tank.br],
+    [t("field.rank"),         tank.rank],
+    [t("field.nickname"),     tank.nickname],
   ];
 
   return (
@@ -135,12 +156,12 @@ function TankDetailModal({ tank, onClose }) {
           padding:"10px 20px", background:C.top, color:C.topFg,
           borderBottom:"3px double #1a1d12", flexShrink:0 }}>
           <span style={{ fontSize:11, letterSpacing:2.5, textTransform:"uppercase" }}>
-            CLASSIFIED VEHICLE DOSSIER
+            {t("dossier.title")}
           </span>
           <button onClick={onClose} style={{
             background:"transparent", border:`1px solid ${C.topFg}`,
             color:C.topFg, fontSize:10, letterSpacing:1.5, padding:"3px 10px", cursor:"pointer" }}>
-            CLOSE DOSSIER ×
+            {t("dossier.close")}
           </button>
         </div>
 
@@ -150,7 +171,7 @@ function TankDetailModal({ tank, onClose }) {
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
                 padding:"7px 14px", borderBottom:`1px solid ${C.border}`,
                 fontSize:10, letterSpacing:1.5, color:C.muted, background:C.paper }}>
-                <span>FIG. A — IDENTIFICATION PLATE</span>
+                <span>{t("dossier.fig_a")}</span>
                 <span>{(tank.nation||"").toUpperCase()} · {tank.year}</span>
               </div>
               <div style={{ height:200, background:"#3a3a30", display:"flex",
@@ -167,19 +188,19 @@ function TankDetailModal({ tank, onClose }) {
                   fontSize:14, letterSpacing:2, fontWeight:700,
                   fontFamily:"'Special Elite',monospace",
                   opacity:0.85, background:"rgba(251,246,225,0.4)" }}>
-                  IDENTIFIED
+                  {t("dossier.identified")}
                 </div>
               </div>
               <div style={{ display:"flex", justifyContent:"space-between", padding:"5px 14px",
                 fontSize:10, letterSpacing:1.5, color:C.muted,
                 borderTop:`1px solid ${C.border}`, background:C.paper }}>
-                <span>SIDE VIEW · FIELD MANUAL</span>
-                <span>SCALE 1:60</span>
+                <span>{t("dossier.side_view")}</span>
+                <span>{t("dossier.scale")}</span>
               </div>
             </div>
 
             <div style={{ ...box(), padding:"12px 18px" }}>
-              <div style={{ fontSize:10, letterSpacing:2, color:C.muted, marginBottom:4 }}>DESIGNATION</div>
+              <div style={{ fontSize:10, letterSpacing:2, color:C.muted, marginBottom:4 }}>{t("dossier.designation")}</div>
               <div style={{ fontSize:22, fontWeight:700, letterSpacing:1 }}>{tank.name.toUpperCase()}</div>
             </div>
 
@@ -198,7 +219,7 @@ function TankDetailModal({ tank, onClose }) {
           <div style={{ flex:"1 1 45%", display:"flex", flexDirection:"column", gap:12, minWidth:0 }}>
             <div style={{ ...box(), padding:"12px 18px" }}>
               <div style={{ fontSize:10, letterSpacing:2, color:C.muted, textTransform:"uppercase",
-                borderBottom:`1px solid ${C.border}`, paddingBottom:4, marginBottom:10 }}>DOSSIER</div>
+                borderBottom:`1px solid ${C.border}`, paddingBottom:4, marginBottom:10 }}>{t("field.dossier")}</div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px 14px" }}>
                 {dossierFields.map(([k, v]) => (
                   <div key={k} style={{ display:"flex", flexDirection:"column", gap:2 }}>
@@ -212,7 +233,7 @@ function TankDetailModal({ tank, onClose }) {
             {tank.spotting && tank.spotting.length > 0 && (
               <div style={{ ...box(), padding:"11px 15px", flex:1 }}>
                 <div style={{ fontSize:10, letterSpacing:2, color:C.muted, textTransform:"uppercase",
-                  borderBottom:`1px solid ${C.border}`, paddingBottom:4, marginBottom:8 }}>HOW TO SPOT IT</div>
+                  borderBottom:`1px solid ${C.border}`, paddingBottom:4, marginBottom:8 }}>{t("dossier.how_to_spot")}</div>
                 <ul style={{ margin:0, padding:0, listStyle:"none", display:"flex", flexDirection:"column", gap:6 }}>
                   {tank.spotting.map((s, i) => (
                     <li key={i} style={{ fontSize:13, lineHeight:1.35, paddingLeft:16, position:"relative" }}>
@@ -226,7 +247,7 @@ function TankDetailModal({ tank, onClose }) {
             {tank.fact && (
               <div style={{ ...box(), padding:"11px 15px", flexShrink:0 }}>
                 <div style={{ fontSize:10, letterSpacing:2, color:C.muted, textTransform:"uppercase",
-                  borderBottom:`1px solid ${C.border}`, paddingBottom:4, marginBottom:8 }}>FIELD NOTE</div>
+                  borderBottom:`1px solid ${C.border}`, paddingBottom:4, marginBottom:8 }}>{t("dossier.field_note")}</div>
                 <p style={{ fontSize:13, lineHeight:1.4, margin:0, color:"#3a3a30" }}>{tank.fact}</p>
               </div>
             )}
@@ -239,6 +260,7 @@ function TankDetailModal({ tank, onClose }) {
 
 // ─── Search Panel ─────────────────────────────────────────────────
 function SearchPanel() {
+  const { t } = useLang();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
   const results = filterTanks(query);
@@ -251,7 +273,7 @@ function SearchPanel() {
         value={query}
         onChange={e => setQuery(e.target.value)}
         autoFocus
-        placeholder="Search by name, nation, type, era, BR…"
+        placeholder={t("search.placeholder")}
         style={{
           background:C.panel, border:`2px solid ${C.border}`, color:C.border,
           fontSize:14, padding:"10px 14px", width:"100%", outline:"none", letterSpacing:0.5,
@@ -267,7 +289,7 @@ function SearchPanel() {
               <div style={{ fontSize:14, color:C.red, letterSpacing:2,
                 border:`2px solid ${C.red}`, display:"inline-block",
                 padding:"6px 18px", transform:"rotate(-2deg)", fontWeight:700 }}>
-                NO RECORDS FOUND
+                {t("search.no_records")}
               </div>
             </div>
           ) : (
@@ -331,6 +353,7 @@ function Field({ label, value, onChange, type = "text", autoFocus = false }) {
 
 // ─── Enlist View ──────────────────────────────────────────────────
 function EnlistView({ onBack }) {
+  const { t } = useLang();
   const [nick, setNick]       = useState("");
   const [pass, setPass]       = useState("");
   const [confirm, setConfirm] = useState("");
@@ -341,14 +364,14 @@ function EnlistView({ onBack }) {
     e.preventDefault();
     setError("");
 
-    if (!nick.trim()) return setError("CALLSIGN REQUIRED");
-    if (nick.trim().length < 3) return setError("CALLSIGN TOO SHORT — MINIMUM 3 CHARACTERS");
-    if (nick.trim().length > 20) return setError("CALLSIGN TOO LONG — MAXIMUM 20 CHARACTERS");
-    if (!/^[A-Za-z0-9_\-\.]+$/.test(nick.trim())) return setError("INVALID CALLSIGN — LETTERS, NUMBERS, AND _ - . ONLY");
-    if (await Accounts.isNicknameTaken(nick.trim())) return setError("CALLSIGN ALREADY CLAIMED — CHOOSE ANOTHER");
-    if (!pass) return setError("AUTHENTICATION CODE REQUIRED");
-    if (pass.length < 6) return setError("AUTHENTICATION CODE TOO SHORT — MINIMUM 6 CHARACTERS");
-    if (pass !== confirm) return setError("AUTHENTICATION CODES DO NOT MATCH");
+    if (!nick.trim()) return setError(t("enlist.err.callsign_required"));
+    if (nick.trim().length < 3) return setError(t("enlist.err.callsign_short"));
+    if (nick.trim().length > 20) return setError(t("enlist.err.callsign_long"));
+    if (!/^[A-Za-z0-9_\-\.]+$/.test(nick.trim())) return setError(t("enlist.err.callsign_invalid"));
+    if (await Accounts.isNicknameTaken(nick.trim())) return setError(t("enlist.err.callsign_taken"));
+    if (!pass) return setError(t("enlist.err.password_required"));
+    if (pass.length < 6) return setError(t("enlist.err.password_short"));
+    if (pass !== confirm) return setError(t("enlist.err.password_mismatch"));
 
     setLoading(true);
     await Accounts.create(nick.trim(), pass);
@@ -360,12 +383,12 @@ function EnlistView({ onBack }) {
       <div style={{ ...box(), padding:"24px 28px" }}>
         <div style={{ fontSize:10, letterSpacing:2.5, color:C.muted, textTransform:"uppercase",
           borderBottom:`1px solid ${C.border}`, paddingBottom:10, marginBottom:20 }}>
-          PERSONNEL ENLISTMENT — NEW RECRUIT
+          {t("enlist.title")}
         </div>
         <form onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:14 }}>
-          <Field label="ASSIGN CALLSIGN (NICKNAME)" value={nick} onChange={setNick} autoFocus />
-          <Field label="SET AUTHENTICATION CODE (PASSWORD)" value={pass} onChange={setPass} type="password" />
-          <Field label="CONFIRM AUTHENTICATION CODE" value={confirm} onChange={setConfirm} type="password" />
+          <Field label={t("enlist.callsign_label")} value={nick} onChange={setNick} autoFocus />
+          <Field label={t("enlist.password_label")} value={pass} onChange={setPass} type="password" />
+          <Field label={t("enlist.confirm_label")} value={confirm} onChange={setConfirm} type="password" />
 
           {error && (
             <div style={{ fontSize:11, color:C.red, letterSpacing:1.5, fontWeight:700,
@@ -379,14 +402,14 @@ function EnlistView({ onBack }) {
               style={{ flex:1, padding:"12px 0", background:"transparent",
                 border:`2px solid ${C.border}`, color:C.border,
                 fontSize:11, letterSpacing:2, fontWeight:700, cursor:"pointer" }}>
-              ← STAND DOWN
+              {t("enlist.stand_down")}
             </button>
             <button type="submit" disabled={loading}
               style={{ flex:2, padding:"12px 0", background: loading ? C.muted : C.green,
                 border:`2px solid ${C.border}`, color:"#f0ebd0",
                 fontSize:12, letterSpacing:2.5, fontWeight:700,
                 cursor: loading ? "default" : "pointer", transition:"background 0.15s" }}>
-              {loading ? "PROCESSING…" : "ENLIST NOW →"}
+              {loading ? t("enlist.processing") : t("enlist.submit")}
             </button>
           </div>
         </form>
@@ -397,6 +420,7 @@ function EnlistView({ onBack }) {
 
 // ─── Report View ──────────────────────────────────────────────────
 function ReportView({ onBack }) {
+  const { t } = useLang();
   const [nick, setNick]   = useState("");
   const [pass, setPass]   = useState("");
   const [error, setError] = useState("");
@@ -405,15 +429,15 @@ function ReportView({ onBack }) {
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
-    if (!nick.trim()) return setError("CALLSIGN REQUIRED");
-    if (!pass) return setError("AUTHENTICATION CODE REQUIRED");
+    if (!nick.trim()) return setError(t("login.err.callsign_required"));
+    if (!pass) return setError(t("login.err.password_required"));
 
     setLoading(true);
     const ok = await Accounts.login(nick.trim(), pass);
     if (!ok) {
       setLoading(false);
       const exists = await Accounts.isNicknameTaken(nick.trim());
-      return setError(exists ? "AUTHENTICATION FAILED — CHECK YOUR CODE" : "CALLSIGN NOT RECOGNISED — ENLIST FIRST");
+      return setError(exists ? t("login.err.auth_failed") : t("login.err.not_recognised"));
     }
     window.location.href = "Tank Flashcards.html";
   }
@@ -423,11 +447,11 @@ function ReportView({ onBack }) {
       <div style={{ ...box(), padding:"24px 28px" }}>
         <div style={{ fontSize:10, letterSpacing:2.5, color:C.muted, textTransform:"uppercase",
           borderBottom:`1px solid ${C.border}`, paddingBottom:10, marginBottom:20 }}>
-          PERSONNEL AUTHENTICATION — REPORT FOR DUTY
+          {t("login.title")}
         </div>
         <form onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:14 }}>
-          <Field label="CALLSIGN" value={nick} onChange={setNick} autoFocus />
-          <Field label="AUTHENTICATION CODE" value={pass} onChange={setPass} type="password" />
+          <Field label={t("login.callsign_label")} value={nick} onChange={setNick} autoFocus />
+          <Field label={t("login.password_label")} value={pass} onChange={setPass} type="password" />
 
           {error && (
             <div style={{ fontSize:11, color:C.red, letterSpacing:1.5, fontWeight:700,
@@ -441,14 +465,14 @@ function ReportView({ onBack }) {
               style={{ flex:1, padding:"12px 0", background:"transparent",
                 border:`2px solid ${C.border}`, color:C.border,
                 fontSize:11, letterSpacing:2, fontWeight:700, cursor:"pointer" }}>
-              ← STAND DOWN
+              {t("login.stand_down")}
             </button>
             <button type="submit" disabled={loading}
               style={{ flex:2, padding:"12px 0", background: loading ? C.muted : C.top,
                 border:`2px solid ${C.border}`, color:C.topFg,
                 fontSize:11, letterSpacing:2, fontWeight:700,
                 cursor: loading ? "default" : "pointer", transition:"background 0.15s" }}>
-              {loading ? "VERIFYING…" : "REPORT FOR DUTY →"}
+              {loading ? t("login.verifying") : t("login.submit")}
             </button>
           </div>
         </form>
@@ -459,8 +483,9 @@ function ReportView({ onBack }) {
 
 // ─── Mission Select View ──────────────────────────────────────────
 function MissionView({ onBack }) {
-  const allNations = [...new Set((window.TANKS || []).map(t => t.nation).filter(Boolean))].sort();
-  const allEras    = [...new Set((window.TANKS || []).map(t => t.era).filter(Boolean))].sort();
+  const { t } = useLang();
+  const allNations = [...new Set((window.TANKS || []).map(tk => tk.nation).filter(Boolean))].sort();
+  const allEras    = [...new Set((window.TANKS || []).map(tk => tk.era).filter(Boolean))].sort();
 
   const [nations, setNations] = useState(new Set(allNations));
   const [eras, setEras]       = useState(new Set(allEras));
@@ -482,8 +507,8 @@ function MissionView({ onBack }) {
     });
   }
 
-  const matchCount = (window.TANKS || []).filter(t =>
-    nations.has(t.nation) && eras.has(t.era)
+  const matchCount = (window.TANKS || []).filter(tk =>
+    nations.has(tk.nation) && eras.has(tk.era)
   ).length;
 
   function handleDeploy() {
@@ -510,14 +535,14 @@ function MissionView({ onBack }) {
       <div style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 20px",
         borderBottom:`2px solid ${C.border}`, flexShrink:0 }}>
         <button onClick={onBack} style={{ ...btnBase(false), padding:"6px 12px", fontSize:10 }}>
-          ← BACK
+          {t("mission.back")}
         </button>
         <div>
           <div style={{ fontSize:10, letterSpacing:2.5, color:C.muted, textTransform:"uppercase" }}>
-            MISSION SELECT — CONFIGURE DEPLOYMENT
+            {t("mission.title")}
           </div>
           <div style={{ fontSize:12, fontWeight:700, letterSpacing:1, marginTop:2 }}>
-            {matchCount} VEHICLE{matchCount !== 1 ? "S" : ""} IN POOL
+            {matchCount} {matchCount !== 1 ? t("mission.vehicles") : t("mission.vehicle")} {t("mission.in_pool")}
           </div>
         </div>
       </div>
@@ -528,12 +553,12 @@ function MissionView({ onBack }) {
         <div style={{ ...box(), padding:"14px 16px" }}>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
             borderBottom:`1px solid ${C.border}`, paddingBottom:8, marginBottom:12 }}>
-            <div style={{ fontSize:10, letterSpacing:2, color:C.muted, textTransform:"uppercase" }}>NATIONS</div>
+            <div style={{ fontSize:10, letterSpacing:2, color:C.muted, textTransform:"uppercase" }}>{t("mission.nations")}</div>
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={() => setNations(new Set(allNations))}
-                style={{ ...btnBase(false), padding:"3px 10px", fontSize:9 }}>ALL</button>
+                style={{ ...btnBase(false), padding:"3px 10px", fontSize:9 }}>{t("mission.all")}</button>
               <button onClick={() => setNations(new Set())}
-                style={{ ...btnBase(false), padding:"3px 10px", fontSize:9 }}>NONE</button>
+                style={{ ...btnBase(false), padding:"3px 10px", fontSize:9 }}>{t("mission.none")}</button>
             </div>
           </div>
           <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
@@ -549,12 +574,12 @@ function MissionView({ onBack }) {
         <div style={{ ...box(), padding:"14px 16px" }}>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
             borderBottom:`1px solid ${C.border}`, paddingBottom:8, marginBottom:12 }}>
-            <div style={{ fontSize:10, letterSpacing:2, color:C.muted, textTransform:"uppercase" }}>ERA</div>
+            <div style={{ fontSize:10, letterSpacing:2, color:C.muted, textTransform:"uppercase" }}>{t("mission.era")}</div>
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={() => setEras(new Set(allEras))}
-                style={{ ...btnBase(false), padding:"3px 10px", fontSize:9 }}>ALL</button>
+                style={{ ...btnBase(false), padding:"3px 10px", fontSize:9 }}>{t("mission.all")}</button>
               <button onClick={() => setEras(new Set())}
-                style={{ ...btnBase(false), padding:"3px 10px", fontSize:9 }}>NONE</button>
+                style={{ ...btnBase(false), padding:"3px 10px", fontSize:9 }}>{t("mission.none")}</button>
             </div>
           </div>
           <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
@@ -569,7 +594,7 @@ function MissionView({ onBack }) {
         {authError && (
           <div style={{ fontSize:11, color:C.red, letterSpacing:1.5, fontWeight:700,
             padding:"8px 12px", border:`1px solid ${C.red}`, background:"rgba(196,69,47,0.06)" }}>
-            ⚠ MUST ENLIST OR REPORT FOR DUTY BEFORE DEPLOYING
+            {t("mission.must_auth")}
           </div>
         )}
       </div>
@@ -579,7 +604,7 @@ function MissionView({ onBack }) {
         background:C.bgDark, display:"flex", alignItems:"center", gap:14 }}>
         {matchCount < 4 && (
           <div style={{ fontSize:10, color:C.red, letterSpacing:1, flex:1 }}>
-            SELECT AT LEAST 4 VEHICLES TO DEPLOY
+            {t("mission.need_4")}
           </div>
         )}
         <button onClick={handleDeploy} disabled={matchCount < 4}
@@ -590,7 +615,7 @@ function MissionView({ onBack }) {
             cursor: matchCount >= 4 ? "pointer" : "default",
             boxShadow: matchCount >= 4 ? `0 2px 0 ${C.border}` : "none",
             transition:"background 0.15s" }}>
-          DEPLOY →
+          {t("mission.deploy")}
         </button>
       </div>
     </div>
@@ -599,6 +624,7 @@ function MissionView({ onBack }) {
 
 // ─── Search View ──────────────────────────────────────────────────
 function SearchView({ onBack }) {
+  const { t } = useLang();
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:0, height:"100%" }}>
       <div style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 20px",
@@ -606,10 +632,10 @@ function SearchView({ onBack }) {
         <button onClick={onBack}
           style={{ padding:"6px 12px", fontSize:10, letterSpacing:1.5, fontWeight:700,
             border:`2px solid ${C.border}`, cursor:"pointer", background:C.panel, color:C.border }}>
-          ← BACK
+          {t("search.back")}
         </button>
         <div style={{ fontSize:10, letterSpacing:2.5, color:C.muted, textTransform:"uppercase" }}>
-          INTEL DATABASE — VEHICLE SEARCH
+          {t("search.title")}
         </div>
       </div>
       <div style={{ flex:1, overflowY:"auto", padding:"18px 20px" }}>
@@ -621,6 +647,7 @@ function SearchView({ onBack }) {
 
 // ─── Leaderboard View ─────────────────────────────────────────────
 function LeaderboardView({ onBack }) {
+  const { t } = useLang();
   const [rows, setRows] = useState([]);
   const currentUser = Accounts.getCurrent();
   useEffect(() => { Accounts.getLeaderboard().then(setRows); }, []);
@@ -634,10 +661,10 @@ function LeaderboardView({ onBack }) {
         <button onClick={onBack}
           style={{ padding:"6px 12px", fontSize:10, letterSpacing:1.5, fontWeight:700,
             border:`2px solid ${C.border}`, cursor:"pointer", background:C.panel, color:C.border }}>
-          ← BACK
+          {t("lb.back")}
         </button>
         <div style={{ fontSize:10, letterSpacing:2.5, color:C.muted, textTransform:"uppercase" }}>
-          THEATER STANDINGS — LEADERBOARD
+          {t("lb.title")}
         </div>
       </div>
 
@@ -647,7 +674,7 @@ function LeaderboardView({ onBack }) {
             <div style={{ fontSize:14, color:C.muted, letterSpacing:2,
               border:`2px solid ${C.muted}`, display:"inline-block",
               padding:"8px 20px", fontWeight:700 }}>
-              NO OPERATIVES ON RECORD
+              {t("lb.no_operatives")}
             </div>
           </div>
         ) : (
@@ -657,11 +684,11 @@ function LeaderboardView({ onBack }) {
               padding:"8px 14px", background:C.top, color:C.topFg,
               fontSize:9, letterSpacing:2, textTransform:"uppercase",
               borderBottom:`2px solid ${C.border}` }}>
-              <div>#</div>
-              <div>CALLSIGN</div>
-              <div style={{ textAlign:"right" }}>SCORE</div>
-              <div style={{ textAlign:"right" }}>ACCURACY</div>
-              <div style={{ textAlign:"right" }}>MASTERED</div>
+              <div>{t("lb.rank")}</div>
+              <div>{t("lb.callsign")}</div>
+              <div style={{ textAlign:"right" }}>{t("lb.score")}</div>
+              <div style={{ textAlign:"right" }}>{t("lb.accuracy")}</div>
+              <div style={{ textAlign:"right" }}>{t("lb.mastered")}</div>
             </div>
 
             {rows.map((row, idx) => {
@@ -681,7 +708,7 @@ function LeaderboardView({ onBack }) {
                     {row.nickname.toUpperCase()}
                     {isMe && (
                       <span style={{ fontSize:9, letterSpacing:1.5, marginLeft:8,
-                        opacity:0.7, fontWeight:400 }}>YOU</span>
+                        opacity:0.7, fontWeight:400 }}>{t("lb.you")}</span>
                     )}
                   </div>
                   <div style={{ textAlign:"right", fontSize:15, fontWeight:700 }}>
@@ -701,7 +728,7 @@ function LeaderboardView({ onBack }) {
         )}
 
         <div style={{ marginTop:14, display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10 }}>
-          {[["SCORE", "Total correct answers"], ["ACCURACY", "% of correct over all attempts"], ["MASTERED", "Vehicles with 3+ consecutive correct"]].map(([label, desc]) => (
+          {[[t("lb.score"), t("lb.score.desc")], [t("lb.accuracy"), t("lb.accuracy.desc")], [t("lb.mastered"), t("lb.mastered.desc")]].map(([label, desc]) => (
             <div key={label} style={{ ...box(), padding:"10px 12px" }}>
               <div style={{ fontSize:9, letterSpacing:2, color:C.muted, textTransform:"uppercase" }}>{label}</div>
               <div style={{ fontSize:11, color:C.muted, marginTop:3, lineHeight:1.3 }}>{desc}</div>
@@ -715,6 +742,7 @@ function LeaderboardView({ onBack }) {
 
 // ─── Top Bar ──────────────────────────────────────────────────────
 function TopBar() {
+  const { lang, setLang, t } = useLang();
   return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
       padding:"12px 28px", background:C.top, color:C.topFg,
@@ -725,11 +753,20 @@ function TopBar() {
           fontSize:18, fontWeight:700, border:"2px solid #1a1d12" }}>★</div>
         <div>
           <div style={{ fontSize:18, letterSpacing:2, fontWeight:700 }}>ARMOR ID</div>
-          <div style={{ fontSize:10, letterSpacing:1, opacity:0.65 }}>FIELD TRAINING DECK · WWII → PRESENT</div>
+          <div style={{ fontSize:10, letterSpacing:1, opacity:0.65 }}>{t("topbar.subtitle")}</div>
         </div>
       </div>
-      <div style={{ fontSize:10, letterSpacing:2, opacity:0.6, textTransform:"uppercase" }}>
-        CLASSIFIED PERSONNEL DOSSIER
+      <div style={{ display:"flex", alignItems:"center", gap:2 }}>
+        {["EN","FR"].map(l => (
+          <span key={l} onClick={() => setLang(l)} style={{
+            padding:"3px 10px", fontSize:10, letterSpacing:1.5, cursor: lang === l ? "default" : "pointer",
+            background: lang === l ? C.topFg : "transparent",
+            color:       lang === l ? C.top   : C.topFg,
+            fontWeight:  lang === l ? 700 : 400,
+            border:`1px solid ${C.topFg}`,
+            marginLeft: l === "EN" ? 0 : -1,
+          }}>{l}</span>
+        ))}
       </div>
     </div>
   );
@@ -750,6 +787,7 @@ function PageWrap({ children, padded = false }) {
 
 // ─── Hub View ─────────────────────────────────────────────────────
 function HubView({ onEnlist, onReport, onMission, onSearch, onLeaderboard }) {
+  const { t } = useLang();
   const currentUser = Accounts.getCurrent();
   const isValid = Accounts.isValidSession();
   const [noAuthMsg, setNoAuthMsg] = useState(false);
@@ -780,7 +818,7 @@ function HubView({ onEnlist, onReport, onMission, onSearch, onLeaderboard }) {
 
         <div style={{ textAlign:"center" }}>
           <div style={{ fontSize:11, letterSpacing:4, color:C.muted, textTransform:"uppercase", marginBottom:6 }}>
-            FIELD TRAINING — VEHICLE IDENTIFICATION PROGRAM
+            {t("hub.tagline")}
           </div>
           <div style={{ borderTop:"3px double #1c1c14", marginTop:10 }} />
         </div>
@@ -792,7 +830,7 @@ function HubView({ onEnlist, onReport, onMission, onSearch, onLeaderboard }) {
             padding:"12px 18px" }}>
             <div>
               <div style={{ fontSize:9, letterSpacing:2.5, color:"#1a1a14", opacity:0.7,
-                textTransform:"uppercase", marginBottom:3 }}>ACTIVE OPERATIVE</div>
+                textTransform:"uppercase", marginBottom:3 }}>{t("hub.active_operative")}</div>
               <div style={{ fontSize:16, fontWeight:700, letterSpacing:1, color:"#1a1a14" }}>
                 {currentUser.toUpperCase()}
               </div>
@@ -801,7 +839,7 @@ function HubView({ onEnlist, onReport, onMission, onSearch, onLeaderboard }) {
               onClick={async () => { await Accounts.logout(); window.location.reload(); }}
               style={{ background:"transparent", border:`1px solid #1a1a14`, color:"#1a1a14",
                 fontSize:9, letterSpacing:1.5, padding:"4px 10px", cursor:"pointer", opacity:0.6 }}>
-              LOG OUT
+              {t("hub.log_out")}
             </button>
           </div>
         ) : (
@@ -812,7 +850,7 @@ function HubView({ onEnlist, onReport, onMission, onSearch, onLeaderboard }) {
                 fontSize:12, letterSpacing:2.5, fontWeight:700, cursor:"pointer", transition:"filter 0.12s" }}
               onMouseOver={e => e.currentTarget.style.filter = "brightness(1.12)"}
               onMouseOut={e => e.currentTarget.style.filter = "none"}>
-              ENLIST
+              {t("hub.enlist")}
             </button>
             <button onClick={onReport}
               style={{ padding:"14px 0", background:C.top, color:C.topFg,
@@ -820,7 +858,7 @@ function HubView({ onEnlist, onReport, onMission, onSearch, onLeaderboard }) {
                 fontSize:11, letterSpacing:2, fontWeight:700, cursor:"pointer", transition:"filter 0.12s" }}
               onMouseOver={e => e.currentTarget.style.filter = "brightness(1.12)"}
               onMouseOut={e => e.currentTarget.style.filter = "none"}>
-              REPORT FOR DUTY
+              {t("hub.report_for_duty")}
             </button>
           </div>
         )}
@@ -828,15 +866,15 @@ function HubView({ onEnlist, onReport, onMission, onSearch, onLeaderboard }) {
         {noAuthMsg && (
           <div style={{ fontSize:11, color:C.red, letterSpacing:1.5, fontWeight:700,
             padding:"8px 12px", border:`1px solid ${C.red}`, background:"rgba(196,69,47,0.06)" }}>
-            ⚠ MUST ENLIST OR REPORT FOR DUTY BEFORE DEPLOYING
+            {t("hub.must_auth")}
           </div>
         )}
 
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
-          {menuBtn("QUICK DEPLOYMENT", "All vehicles · start immediately", handleQuickStart, C.top)}
-          {menuBtn("MISSION SELECT", "Choose nations & eras", onMission, C.green)}
-          {menuBtn("INTEL DATABASE", "Search vehicle records", onSearch, C.top)}
-          {menuBtn("THEATER STANDINGS", "Leaderboard", onLeaderboard, C.top)}
+          {menuBtn(t("hub.quick_deployment"), t("hub.quick_deployment.sub"), handleQuickStart, C.top)}
+          {menuBtn(t("hub.mission_select"), t("hub.mission_select.sub"), onMission, C.green)}
+          {menuBtn(t("hub.intel_database"), t("hub.intel_database.sub"), onSearch, C.top)}
+          {menuBtn(t("hub.theater_standings"), t("hub.theater_standings.sub"), onLeaderboard, C.top)}
         </div>
 
       </div>
@@ -859,6 +897,7 @@ function SubPage({ children }) {
 
 // ─── Bug Report Modal ─────────────────────────────────────────────
 function BugReportModal() {
+  const { t } = useLang();
   const [open, setOpen]           = React.useState(false);
   const [issueType, setIssueType] = React.useState("Wrong image");
   const [description, setDesc]    = React.useState("");
@@ -918,46 +957,46 @@ function BugReportModal() {
           fontFamily:"'Special Elite',monospace", fontSize:10,
           letterSpacing:1.5, cursor:"pointer",
         }}
-        title="Report an issue"
-      >⚑ REPORT</button>
+        title={t("bug.btn_tooltip")}
+      >{t("bug.btn_label")}</button>
 
       {open && (
         <div style={overlayStyle} onClick={e => { if (e.target===e.currentTarget) setOpen(false); }}>
           <div style={modalStyle}>
             <div style={{ fontSize:13, fontWeight:700, letterSpacing:2, marginBottom:16,
               borderBottom:`1px dashed ${C.border}`, paddingBottom:10 }}>
-              REPORT AN ISSUE
+              {t("bug.title")}
             </div>
-            <label style={labelStyle}>ISSUE TYPE</label>
+            <label style={labelStyle}>{t("bug.issue_type")}</label>
             <select
               value={issueType} onChange={e => setIssueType(e.target.value)}
               style={{ ...inputStyle }}
             >
-              <option>Wrong image</option>
-              <option>Wrong name / designation</option>
-              <option>Wrong stats</option>
-              <option>Other</option>
+              <option value="Wrong image">{t("bug.opt.wrong_image")}</option>
+              <option value="Wrong name / designation">{t("bug.opt.wrong_name")}</option>
+              <option value="Wrong stats">{t("bug.opt.wrong_stats")}</option>
+              <option value="Other">{t("bug.opt.other")}</option>
             </select>
-            <label style={labelStyle}>DESCRIPTION (OPTIONAL)</label>
+            <label style={labelStyle}>{t("bug.desc_label")}</label>
             <textarea
               value={description} onChange={e => setDesc(e.target.value)}
-              rows={3} placeholder="Add details…"
+              rows={3} placeholder={t("bug.desc_placeholder")}
               style={{ ...inputStyle, resize:"vertical" }}
             />
             {status === "ok" && (
               <div style={{ color:C.green, fontSize:12, letterSpacing:1, marginBottom:12 }}>
-                ✓ REPORT SUBMITTED — THANK YOU
+                {t("bug.success")}
               </div>
             )}
             {status === "err" && (
               <div style={{ color:C.red, fontSize:12, letterSpacing:1, marginBottom:12 }}>
-                ✗ SUBMISSION FAILED — TRY AGAIN
+                {t("bug.error")}
               </div>
             )}
             <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
-              <button style={btnStyle(false)} onClick={() => setOpen(false)}>CANCEL</button>
+              <button style={btnStyle(false)} onClick={() => setOpen(false)}>{t("bug.cancel")}</button>
               <button style={btnStyle(true)} onClick={submit} disabled={status==="sending"}>
-                {status==="sending" ? "SENDING…" : "SUBMIT REPORT"}
+                {status==="sending" ? t("bug.sending") : t("bug.submit")}
               </button>
             </div>
           </div>
@@ -969,6 +1008,7 @@ function BugReportModal() {
 
 // ─── App ──────────────────────────────────────────────────────────
 function App() {
+  const { t } = useLang();
   const [view, setView] = useState("hub");
   const [ready, setReady] = useState(false);
 
@@ -977,7 +1017,7 @@ function App() {
   if (!ready) return (
     <div style={{ color:"#e8e3c2", textAlign:"center", padding:60,
       fontFamily:"'Special Elite',monospace", fontSize:11, letterSpacing:3 }}>
-      LOADING INTEL...
+      {t("hub.loading")}
     </div>
   );
 
@@ -1027,4 +1067,6 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <LanguageProvider><App /></LanguageProvider>
+);
