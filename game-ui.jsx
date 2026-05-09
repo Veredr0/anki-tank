@@ -462,9 +462,8 @@ function TankCard({ card, cardInfo, picked, revealed, onPick, onAdvance, session
 }
 
 // ─── Report Modal ─────────────────────────────────────────────────
-function ReportModal({ tankName, tankPhotoUrl }) {
+function ReportModal({ tankName, tankPhotoUrl, open, setOpen }) {
   const { t } = useLang();
-  const [open, setOpen]         = React.useState(false);
   const [issueType, setIssueType] = React.useState("Wrong image");
   const [description, setDesc]  = React.useState("");
   const [status, setStatus]     = React.useState(null); // null | "sending" | "ok" | "err"
@@ -586,6 +585,7 @@ function App() {
   const [revealed, setRevealed]     = useState(false);
   const [session, setSession]       = useState({ right: 0, wrong: 0, hardRight: 0, total: 0 });
   const [cardInfo, setCardInfo]     = useState(null);
+  const [reportOpen, setReportOpen] = useState(false);
   const [writeInput, setWriteInput] = useState("");
 
   useEffect(() => {
@@ -679,6 +679,7 @@ function App() {
   // Keyboard: 1-4 pick choice, space/enter advance
   useEffect(() => {
     const handler = (e) => {
+      if (reportOpen) return;
       if (e.key === " " || e.key === "Enter") {
         if (document.activeElement.tagName === "INPUT") return;
         e.preventDefault();
@@ -691,7 +692,7 @@ function App() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [handleAdvance, handlePick]);
+  }, [handleAdvance, handlePick, reportOpen]);
 
   if (!ready) return (
     <div className="stage" style={{ display:"flex", alignItems:"center", justifyContent:"center",
@@ -715,7 +716,7 @@ function App() {
         onWriteInputChange={setWriteInput}
         onWriteSubmit={handleWriteSubmit}
       />
-      <ReportModal tankName={card?.tank?.name} tankPhotoUrl={card?.tank?.photo} />
+      <ReportModal tankName={card?.tank?.name} tankPhotoUrl={card?.tank?.photo} open={reportOpen} setOpen={setReportOpen} />
     </div>
   );
 }

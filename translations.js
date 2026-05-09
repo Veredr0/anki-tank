@@ -195,7 +195,7 @@ window.TRANSLATIONS = {
     "hub.mission_select.sub":        "Choisir nations & ères",
     "hub.intel_database":            "BASE DE RENSEIGNEMENTS",
     "hub.intel_database.sub":        "Rechercher des dossiers de véhicules",
-    "hub.theater_standings":         "CLASSEMENT DU THÉÂTRE",
+    "hub.theater_standings":         "CLASSEMENT",
     "hub.theater_standings.sub":     "Tableau des scores",
 
     /* ── Enlist form ────────────────────────────────────────────── */
