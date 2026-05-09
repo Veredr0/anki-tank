@@ -907,7 +907,7 @@ function BugReportModal() {
     if (status === "sending") return;
     setStatus("sending");
     try {
-      await window.supabase.from("bug_reports").insert({
+      await window._supabase.from("bug_reports").insert({
         page: "hub",
         tank_name: null,
         tank_photo_url: null,

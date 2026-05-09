@@ -472,7 +472,7 @@ function ReportModal({ tankName, tankPhotoUrl, open, setOpen }) {
     if (status === "sending") return;
     setStatus("sending");
     try {
-      await window.supabase.from("bug_reports").insert({
+      await window._supabase.from("bug_reports").insert({
         page: "quiz",
         tank_name: tankName || null,
         tank_photo_url: tankPhotoUrl || null,
