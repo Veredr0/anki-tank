@@ -9,7 +9,8 @@ window.SRS = (function () {
   // Replace localStorage calls here with fetch("/api/progress", ...) for accounts.
   const playerState = {
     cards: {},       // { [tankName]: { streak, weight, totalRight, totalWrong } }
-    session: { right: 0, wrong: 0, hardRight: 0, total: 0 }
+    session: { right: 0, wrong: 0, hardRight: 0, total: 0 },
+    rolling: []      // circular buffer of last 50 results (true=correct)
   };
 
   function getCard(name) {
@@ -17,6 +18,16 @@ window.SRS = (function () {
       playerState.cards[name] = { streak: 0, weight: 3, totalRight: 0, totalWrong: 0 };
     }
     return playerState.cards[name];
+  }
+
+  function addRollingResult(correct) {
+    playerState.rolling.push(!!correct);
+    if (playerState.rolling.length > 50) playerState.rolling.shift();
+  }
+
+  function getRollingAccuracy() {
+    if (playerState.rolling.length < 5) return 0.70;
+    return playerState.rolling.filter(Boolean).length / playerState.rolling.length;
   }
 
   function onCorrect(name) {
@@ -77,6 +88,39 @@ window.SRS = (function () {
     return shuffle(pool).slice(0, 3);
   }
 
+  let trickFamilies = null;
+  function getTrickFamilies() {
+    if (!trickFamilies) {
+      const groups = {};
+      window.TANKS.forEach(t => {
+        if (t.family) (groups[t.family] = groups[t.family] || []).push(t);
+      });
+      trickFamilies = Object.values(groups).filter(g => g.length >= 4);
+    }
+    return trickFamilies;
+  }
+
+  function buildTrickCard(tank) {
+    const families = getTrickFamilies();
+    const family = families.find(g => g.some(t => t.name === tank.name));
+    if (!family) return null;
+    const correct = family.find(t => t.name === tank.name);
+    const others  = shuffle(family.filter(t => t !== correct)).slice(0, 3);
+    const choices = shuffle([...others, correct]);
+    const hint = correct.gun
+      ? 'Gun: ' + correct.gun
+      : (correct.year ? 'In Service: ' + correct.year : null);
+    return {
+      tank: correct,
+      choices: choices.map(t => t.name),
+      correctIdx: choices.indexOf(correct),
+      transform: 'trick',
+      hardMode: true,
+      writeMode: false,
+      hint,
+    };
+  }
+
   function buildCard(tank, hardMode, writeMode) {
     const distractors = hardMode
       ? getDistractors(tank)
@@ -104,15 +148,14 @@ window.SRS = (function () {
     return a;
   }
 
-  // Stub: replace with API call to persist player data
   function exportState() {
     return JSON.parse(JSON.stringify(playerState));
   }
 
-  // Stub: replace with API call to load player data
   function importState(data) {
     Object.assign(playerState.cards, data.cards || {});
     Object.assign(playerState.session, data.session || {});
+    if (Array.isArray(data.rolling)) playerState.rolling = data.rolling.slice(-50);
   }
 
   function getSessionStats() {
@@ -123,5 +166,5 @@ window.SRS = (function () {
     return { ...getCard(name) };
   }
 
-  return { pickNext, onCorrect, onWrong, isHardMode, buildCard, getSessionStats, getCardInfo, exportState, importState };
+  return { pickNext, onCorrect, onWrong, isHardMode, buildCard, buildTrickCard, addRollingResult, getRollingAccuracy, getSessionStats, getCardInfo, exportState, importState };
 })();
